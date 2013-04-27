@@ -5,7 +5,7 @@
         <groupId>org.eclipse.hudson.plugins</groupId>
         <artifactId>hudson-plugin-parent</artifactId>
         <version>3.0.0</version>
-    <relativePath/>
+    <relativePath />
   </parent>
 
   <groupId>org.hudsonci.plugins</groupId>
@@ -13,7 +13,7 @@
   <packaging>hpi</packaging>
   <name>Hudson Xvnc plugin</name>
   <description>Hudson Xvnc plugin</description>
-  <version>1.13-h-1-SNAPSHOT</version>
+  <version>1.13-h-1</version>
   <url>http://wiki.hudson-ci.org/display/HUDSON/Xvnc+Plugin</url>
   <developers>
     <developer>
@@ -75,7 +75,7 @@
       								</goals>
       							</pluginExecutionFilter>
       							<action>
-      								<ignore/>
+      								<ignore />
       							</action>
       						</pluginExecution>
       						<pluginExecution>
@@ -95,7 +95,7 @@
       								</goals>
       							</pluginExecutionFilter>
       							<action>
-      								<ignore/>
+      								<ignore />
       							</action>
       						</pluginExecution>
       						<pluginExecution>
@@ -114,7 +114,7 @@
       								</goals>
       							</pluginExecutionFilter>
       							<action>
-      								<ignore/>
+      								<ignore />
       							</action>
       						</pluginExecution>
       						<pluginExecution>
@@ -133,7 +133,7 @@
       								</goals>
       							</pluginExecutionFilter>
       							<action>
-      								<ignore/>
+      								<ignore />
       							</action>
       						</pluginExecution>
       					</pluginExecutions>
