@@ -50,6 +50,11 @@
                   </execution>
               </executions>
           </plugin>
+          <plugin>
+              <groupId>org.eclipse.hudson.tools</groupId>
+              <artifactId>maven-hpi-plugin</artifactId>
+              <version>3.0.3</version>
+          </plugin>                     
       </plugins>
       <pluginManagement>
       	<plugins>
@@ -144,21 +149,14 @@
       </pluginManagement>
   </build>
 
-    
-
-    <pluginRepositories>
-        <pluginRepository>
-            <id>repo.jenkins-ci.org</id>
-            <url>http://repo.jenkins-ci.org/public/</url>
-        </pluginRepository>
-    </pluginRepositories>
-<licenses>
+  <licenses>
     <license>
       <name>The MIT license</name>
       <url>http://opensource.org/licenses/MIT</url>
       <distribution>repo</distribution>
     </license>
   </licenses>
+  
   <properties>
     <hudsonTags>buildwrapper</hudsonTags>
   </properties>

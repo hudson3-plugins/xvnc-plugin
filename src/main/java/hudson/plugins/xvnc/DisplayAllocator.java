@@ -1,8 +1,10 @@
 package hudson.plugins.xvnc;
 
+import hudson.model.Node;
+import hudson.slaves.NodeProperty;
+import java.util.HashSet;
 import java.util.Random;
 import java.util.Set;
-import java.util.HashSet;
 
 /**
  * Manages the display numbers in use.
@@ -15,24 +17,20 @@ final class DisplayAllocator {
      */
     private final Set<Integer> allocatedNumbers = new HashSet<Integer>();
     private final Set<Integer> blacklistedNumbers = new HashSet<Integer>();
-    private final int minDisplayNumber;
-    private final int maxDisplayNumber;
 
-    public DisplayAllocator(final int minDisplayNumber, final int maxDisplayNumber) {
-        this.minDisplayNumber = minDisplayNumber;
-        this.maxDisplayNumber = maxDisplayNumber;
+    public DisplayAllocator() {
     }
 
-    private final int getRandomValue() {
-        return minDisplayNumber + (new Random().nextInt(getRange()));
+    private final int getRandomValue(final int min, final int max) {
+        return min + (new Random().nextInt(getRange(min, max)));
     }
 
-    private int getRange() {
-        return (maxDisplayNumber + 1) - minDisplayNumber;
+    private int getRange(final int min, final int max) {
+        return (max + 1) - min;
     }
 
-    public synchronized int allocate() {
-        if (noDisplayNumbersLeft()) {
+    public synchronized int allocate(final int minDisplayNumber, final int maxDisplayNumber) {
+        if (noDisplayNumbersLeft(minDisplayNumber, maxDisplayNumber)) {
             if (!blacklistedNumbers.isEmpty()) {
                 blacklistedNumbers.clear();
             } else {
@@ -43,7 +41,7 @@ final class DisplayAllocator {
         }
         int displayNumber;
         do {
-            displayNumber = getRandomValue();
+            displayNumber = getRandomValue(minDisplayNumber, maxDisplayNumber);
         } while(isNotAvailable(displayNumber));
         allocatedNumbers.add(displayNumber);
         return displayNumber;
@@ -53,8 +51,8 @@ final class DisplayAllocator {
         return allocatedNumbers.contains(number) || blacklistedNumbers.contains(number);
     }
 
-    private boolean noDisplayNumbersLeft() {
-        return allocatedNumbers.size() + blacklistedNumbers.size() >= getRange();
+    private boolean noDisplayNumbersLeft(final int min, final int max) {
+        return allocatedNumbers.size() + blacklistedNumbers.size() >= getRange(min, max);
     }
 
     public synchronized void free(int n) {
@@ -64,5 +62,12 @@ final class DisplayAllocator {
     public void blacklist(int badDisplay) {
         free(badDisplay);
         blacklistedNumbers.add(badDisplay);
+    }
+    
+    /*package*/ static final class Property extends NodeProperty<Node> {
+        private transient final DisplayAllocator allocator = new DisplayAllocator();
+        /*package*/ DisplayAllocator getAllocator() {
+            return allocator;
+        }
     }
 }
