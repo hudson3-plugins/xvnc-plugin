@@ -13,7 +13,7 @@
   <packaging>hpi</packaging>
   <name>Hudson Xvnc plugin</name>
   <description>Hudson Xvnc plugin</description>
-  <version>1.13-h-5-SNAPSHOT</version>
+  <version>1.13-h-5</version>
   <url>http://wiki.hudson-ci.org/display/HUDSON/Xvnc+Plugin</url>
   <developers>
     <developer>
