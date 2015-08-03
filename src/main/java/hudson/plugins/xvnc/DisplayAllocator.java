@@ -1,10 +1,12 @@
 package hudson.plugins.xvnc;
 
-import hudson.model.Node;
-import hudson.slaves.NodeProperty;
+import hudson.model.Saveable;
+import java.io.IOException;
 import java.util.HashSet;
 import java.util.Random;
 import java.util.Set;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * Manages the display numbers in use.
@@ -12,6 +14,9 @@ import java.util.Set;
  * @author Kohsuke Kawaguchi
  */
 final class DisplayAllocator {
+
+    transient Saveable owner;
+
     /**
      * Display numbers in use.
      */
@@ -21,7 +26,17 @@ final class DisplayAllocator {
     public DisplayAllocator() {
     }
 
-    private final int getRandomValue(final int min, final int max) {
+    private void save() {
+        if (owner != null) {
+            try {
+                owner.save();
+            } catch (IOException x) {
+                Logger.getLogger(DisplayAllocator.class.getName()).log(Level.WARNING, null, x);
+            }
+        }
+    }
+
+    private int getRandomValue(final int min, final int max) {
         return min + (new Random().nextInt(getRange(min, max)));
     }
 
@@ -29,7 +44,14 @@ final class DisplayAllocator {
         return (max + 1) - min;
     }
 
-    public synchronized int allocate(final int minDisplayNumber, final int maxDisplayNumber) {
+    public int allocate(final int minDisplayNumber, final int maxDisplayNumber) {
+        try {
+            return doAllocate(minDisplayNumber, maxDisplayNumber);
+        } finally {
+            save();
+        }
+    }
+    private synchronized int doAllocate(final int minDisplayNumber, final int maxDisplayNumber) {
         if (noDisplayNumbersLeft(minDisplayNumber, maxDisplayNumber)) {
             if (!blacklistedNumbers.isEmpty()) {
                 blacklistedNumbers.clear();
@@ -55,25 +77,19 @@ final class DisplayAllocator {
         return allocatedNumbers.size() + blacklistedNumbers.size() >= getRange(min, max);
     }
 
-    public synchronized void free(int n) {
-        allocatedNumbers.remove(n);
+    public void free(int n) {
+        synchronized (this) {
+            allocatedNumbers.remove(n);
+        }
+        save();
     }
 
     public void blacklist(int badDisplay) {
-        free(badDisplay);
-        blacklistedNumbers.add(badDisplay);
+        synchronized (this) {
+            allocatedNumbers.remove(badDisplay);
+            blacklistedNumbers.add(badDisplay);
+        }
+        save();
     }
-    
-    /*package*/ static final class Property extends NodeProperty<Node> {
-        private transient DisplayAllocator allocator = new DisplayAllocator();
-        /*package*/ DisplayAllocator getAllocator() {
-            return allocator;
-        }
-        
-        private Object readResolve() {
-            allocator = new DisplayAllocator();
-            return this;
-        }
 
-   }
 }

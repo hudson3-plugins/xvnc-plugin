@@ -18,6 +18,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.WeakHashMap;
 import hudson.model.Hudson;
@@ -29,7 +30,7 @@ import org.kohsuke.stapler.StaplerRequest;
 
 /**
  * {@link BuildWrapper} that runs <tt>xvnc</tt>.
- * 
+ *
  * @author Kohsuke Kawaguchi
  */
 public class Xvnc extends BuildWrapper {
@@ -46,7 +47,7 @@ public class Xvnc extends BuildWrapper {
     }
 
     @Override
-    public Environment setUp(AbstractBuild build, final Launcher launcher, BuildListener listener) 
+    public Environment setUp(AbstractBuild build, final Launcher launcher, BuildListener listener)
             throws IOException, InterruptedException {
         final PrintStream logger = listener.getLogger();
         DescriptorImpl DESCRIPTOR = Hudson.getInstance().getDescriptorByType(DescriptorImpl.class);
@@ -56,11 +57,11 @@ public class Xvnc extends BuildWrapper {
                 || build.getBuiltOn().getNodeProperties().get(NodePropertyImpl.class) != null) {
             return new Environment(){};
         }
-        
+
         if (DESCRIPTOR.skipOnWindows && !launcher.isUnix()) {
             return new Environment(){};
         }
-        
+
         if (DESCRIPTOR.cleanUp) {
             maybeCleanUp(launcher, listener);
         }
@@ -79,7 +80,7 @@ public class Xvnc extends BuildWrapper {
                 throws IOException, InterruptedException {
 
         final DisplayAllocator allocator = getAllocator(build);
-        
+
         final int displayNumber = allocator.allocate(minDisplayNumber, maxDisplayNumber);
         final String actualCmd = Util.replaceMacro(cmd, Collections.singletonMap("DISPLAY_NUMBER",String.valueOf(displayNumber)));
 
@@ -146,19 +147,22 @@ public class Xvnc extends BuildWrapper {
     }
 
     private DisplayAllocator getAllocator(AbstractBuild<?, ?> build) throws IOException {
-        DisplayAllocator.Property property = build.getBuiltOn().getNodeProperties().get(DisplayAllocator.Property.class);
-        if (property == null) {
-            property = new DisplayAllocator.Property();
-            build.getBuiltOn().getNodeProperties().add(property);
+        DescriptorImpl DESCRIPTOR = Hudson.getInstance().getDescriptorByType(DescriptorImpl.class);
+        String name = build.getBuiltOn().getNodeName();
+        DisplayAllocator allocator = DESCRIPTOR.allocators.get(name);
+        if (allocator == null) {
+            allocator = new DisplayAllocator();
+            allocator.owner = DESCRIPTOR;
+            DESCRIPTOR.allocators.put(name, allocator);
         }
-        return property.getAllocator();
+        return allocator;
     }
-    
+
     /**
      * Whether {@link #maybeCleanUp} has already been run on a given node.
      */
     private static final Map<Node,Boolean> cleanedUpOn = new WeakHashMap<Node,Boolean>();
-    
+
     // XXX I18N
     private static synchronized void maybeCleanUp(Launcher launcher, BuildListener listener) throws IOException, InterruptedException {
         Node node = Computer.currentComputer().getNode();
@@ -175,10 +179,10 @@ public class Xvnc extends BuildWrapper {
         launcher.launch().stdout(logger).cmds("pkill", "Xrealvnc").join();
         launcher.launch().stdout(logger).cmds("sh", "-c", "rm -f /tmp/.X*-lock /tmp/.X11-unix/X*").join();
     }
-    
+
     @Extension
     public static final class DescriptorImpl extends BuildWrapperDescriptor {
-        
+
         /**
          * xvnc command line. This can include macro.
          *
@@ -187,12 +191,12 @@ public class Xvnc extends BuildWrapper {
         public String xvnc;
 
         /*
-         * Base X display number. 
+         * Base X display number.
          */
         public int minDisplayNumber = 10;
 
         /*
-         * Maximum X display number. 
+         * Maximum X display number.
          */
         public int maxDisplayNumber = 99;
 
@@ -200,17 +204,29 @@ public class Xvnc extends BuildWrapper {
          * If true, skip xvnc launch on all Windows slaves.
          */
         public boolean skipOnWindows = true;
-        
+
         /**
          * If true, try to clean up old processes and locks when first run.
          */
         public boolean cleanUp = false;
 
+        // TODO this might cause excessive traffic in SaveableListener; really want a Jenkins API for a Saveable of nonversionable runtime state (cloud slaves, etc.)
+        private Map<String,DisplayAllocator> allocators;
         public DescriptorImpl() {
             super(Xvnc.class);
             load();
         }
 
+        @Override public synchronized void load() {
+            super.load();
+            if (allocators == null) {
+                allocators = new HashMap<String,DisplayAllocator>();
+            } else {
+                for (DisplayAllocator allocator : allocators.values()) {
+                    allocator.owner = this;
+                }
+            }
+        }
         @Override
         public String getDisplayName() {
             return Messages.description();
